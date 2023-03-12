@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -55,8 +54,6 @@ func NewConfigFromFile(file string) (Config, error) {
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	json.Unmarshal(byteValue, &cnf)
-
-	fmt.Printf("%+v\n", cnf)
 
 	return cnf, nil
 }
