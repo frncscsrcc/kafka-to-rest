@@ -1,0 +1,27 @@
+{
+    "group": "my-group",
+    "proxies": [
+        {
+            "name": "proxy1",
+            "consumer": {
+                "host":   "localhost",
+                "port":   9092,
+                "topics": ["topic4"],
+                "dlq":    "topic4DLQ"
+            },
+            "api-caller": {
+                "auth": {
+                    "stored-token-filename": "token.txt"
+                },
+                "protocol": "https",
+                "host": "webhookme.zhitty.com",
+                "port": 443,
+                "path": "send/WkYaaZN0",
+                "retry-delay": 1,
+                "retry-max": 5
+            },
+            "retry-on-status": ["5**", "6**", "40*"],
+            "commit-on-status": ["2**"]
+        }
+    ]
+}
