@@ -123,7 +123,6 @@ func (p *Proxy) shouldRetry(apiResponse apicaller.APIResponse, retryCount int) b
 		return true
 	}
 
-	fmt.Println(retryCount, maxRetries, retryCount <= maxRetries)
 	return retryCount < maxRetries
 
 }
@@ -154,7 +153,6 @@ func (p *Proxy) forwardToAPI() {
 			log.Printf("API returned status %d", apiResponse.Code)
 
 			if p.shouldRetry(apiResponse, retryCount) {
-				fmt.Println(delay)
 				time.Sleep(delay)
 				continue
 			} else if p.shouldCommit(apiResponse) {
