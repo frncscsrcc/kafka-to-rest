@@ -20,3 +20,35 @@ It forwards (async) Kafka messages to (sync) REST API.
 **Missing:**
 - Tests
 - Decent logging
+
+**Config Example:**
+
+```
+{
+    "group": "my-group",
+    "proxies": [
+        {
+            "name": "First Proxy",
+            "consumer": {
+                "host":   "localhost",
+                "port":   9092,
+                "topics": ["topic1", "topic2", "topic3"],
+                "dlq":    "proxy1.dlq"
+            },
+            "api-caller": {
+                "auth": {
+                    "stored-token-filename": "token.txt"
+                },
+                "protocol": "https",
+                "host": "webhookme.zhitty.com",
+                "port": 443,
+                "path": "send/blablabla",
+                "retry-delay": 1,
+                "retry-max": 5
+            },
+            "retry-on-status": ["5**", "6**", "40*"],
+            "commit-on-status": ["2**"]
+        }
+    ]
+}
+```
