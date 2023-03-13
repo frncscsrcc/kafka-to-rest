@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-type ConsumerConfig struct {
+type KafkaConnectorConfig struct {
 	Host   string   `json:"host"`
 	Port   int      `json:"port"`
 	Topics []string `json:"topics"`
@@ -18,7 +18,7 @@ type AuthConfig struct {
 	StoredTokenFilename string `json:"stored-token-filename"`
 }
 
-type APICallerConfig struct {
+type APIConnectorConfig struct {
 	Protocol   string     `json:"protocol"`
 	Host       string     `json:"host"`
 	Port       int        `json:"port"`
@@ -29,11 +29,11 @@ type APICallerConfig struct {
 }
 
 type ProxyConfig struct {
-	Name               string          `json:"name"`
-	Consumer           ConsumerConfig  `json:"consumer"`
-	APICaller          APICallerConfig `json:"api-caller"`
-	RetryOnStatusCode  []string        `json:"retry-on-status"`
-	CommitOnStatusCode []string        `json:"commit-on-status"`
+	Name               string               `json:"name"`
+	Consumer           KafkaConnectorConfig `json:"kafka-connector"`
+	APICaller          APIConnectorConfig   `json:"api-connector"`
+	RetryOnStatusCode  []string             `json:"retry-on-status"`
+	CommitOnStatusCode []string             `json:"commit-on-status"`
 }
 
 type Config struct {

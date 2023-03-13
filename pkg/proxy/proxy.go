@@ -2,9 +2,9 @@ package proxy
 
 import (
 	"fmt"
-	"kafka-to-rest/pkg/apicaller"
+	"kafka-to-rest/pkg/apiconnector"
 	"kafka-to-rest/pkg/config"
-	"kafka-to-rest/pkg/consumer"
+	"kafka-to-rest/pkg/kafkaconnector"
 	"log"
 	"sync"
 	"time"
@@ -13,15 +13,15 @@ import (
 type Proxy struct {
 	name      string
 	config    config.ProxyConfig
-	consumer  *consumer.Consumer
-	apiCaller *apicaller.APICaller
+	consumer  *kafkaconnector.KafkaConnecotr
+	apiCaller *apiconnector.APIConnector
 
 	retryStatusList  map[int]bool
 	commitStatusList map[int]bool
 
 	dataChannelFromConsumer chan []byte
 	dataChannelToApiCaller  chan []byte
-	apiResponseChannel      chan apicaller.APIResponse
+	apiResponseChannel      chan apiconnector.APIResponse
 	commitChannel           chan struct{}
 
 	wg *sync.WaitGroup
@@ -34,7 +34,7 @@ func NewProxy() *Proxy {
 func NewProxyFromConfig(group string, cnf config.ProxyConfig, wg *sync.WaitGroup) (*Proxy, error) {
 	dataChannelFromConsumer := make(chan []byte)
 	dataChannelToApiCaller := make(chan []byte)
-	apiResponseChannel := make(chan apicaller.APIResponse)
+	apiResponseChannel := make(chan apiconnector.APIResponse)
 	commitChannel := make(chan struct{})
 
 	p := &Proxy{
@@ -47,8 +47,16 @@ func NewProxyFromConfig(group string, cnf config.ProxyConfig, wg *sync.WaitGroup
 		dataChannelToApiCaller:  dataChannelToApiCaller,
 		apiResponseChannel:      apiResponseChannel,
 		commitChannel:           commitChannel,
-		consumer:                consumer.NewConsumer(cnf.Consumer, dataChannelFromConsumer, commitChannel),
-		apiCaller:               apicaller.NewApiCaller(cnf.APICaller, dataChannelToApiCaller, apiResponseChannel),
+		consumer: kafkaconnector.NewKafkaConnector(
+			cnf.Consumer,
+			dataChannelFromConsumer,
+			commitChannel,
+		),
+		apiCaller: apiconnector.NewApiConnector(
+			cnf.APICaller,
+			dataChannelToApiCaller,
+			apiResponseChannel,
+		),
 	}
 
 	// init consumer
@@ -110,7 +118,7 @@ func (p *Proxy) RunSync() {
 	go p.apiCaller.ForwardMessage()
 }
 
-func (p *Proxy) shouldRetry(apiResponse apicaller.APIResponse, retryCount int) bool {
+func (p *Proxy) shouldRetry(apiResponse apiconnector.APIResponse, retryCount int) bool {
 	if apiResponse.Error != nil {
 		return true
 	}
@@ -127,7 +135,7 @@ func (p *Proxy) shouldRetry(apiResponse apicaller.APIResponse, retryCount int) b
 
 }
 
-func (p *Proxy) shouldCommit(apiResponse apicaller.APIResponse) bool {
+func (p *Proxy) shouldCommit(apiResponse apiconnector.APIResponse) bool {
 	if _, commit := p.commitStatusList[apiResponse.Code]; commit {
 		return true
 	}

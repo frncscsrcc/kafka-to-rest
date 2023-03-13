@@ -3,13 +3,13 @@
     "proxies": [
         {
             "name": "proxy1",
-            "consumer": {
+            "kafka-connector": {
                 "host":   "localhost",
                 "port":   9092,
                 "topics": ["topic4"],
                 "dlq":    "topic4DLQ"
             },
-            "api-caller": {
+            "api-connector": {
                 "auth": {
                     "stored-token-filename": "token.txt"
                 },

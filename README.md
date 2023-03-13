@@ -29,13 +29,13 @@ It forwards (async) Kafka messages to (sync) REST API.
     "proxies": [
         {
             "name": "First Proxy",
-            "consumer": {
+            "kafka-connector": {
                 "host":   "localhost",
                 "port":   9092,
                 "topics": ["topic1", "topic2", "topic3"],
                 "dlq":    "proxy1.dlq"
             },
-            "api-caller": {
+            "api-connector": {
                 "auth": {
                     "stored-token-filename": "token.txt"
                 },

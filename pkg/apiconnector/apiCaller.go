@@ -1,4 +1,4 @@
-package apicaller
+package apiconnector
 
 import (
 	"bytes"
@@ -15,15 +15,15 @@ type APIResponse struct {
 	Code  int
 }
 
-type APICaller struct {
-	config             config.APICallerConfig
+type APIConnector struct {
+	config             config.APIConnectorConfig
 	dataChannel        chan []byte
 	apiResponseChannel chan APIResponse
 	authToken          string
 	doneChannel        chan struct{}
 }
 
-func (p *APICaller) setToken() {
+func (p *APIConnector) setToken() {
 	if p.config.Auth.StaticToken != "" {
 		p.authToken = p.config.Auth.StaticToken
 		return
@@ -37,8 +37,8 @@ func (p *APICaller) setToken() {
 	}
 }
 
-func NewApiCaller(cnf config.APICallerConfig, dataChannel chan []byte, apiResponseChannel chan APIResponse) *APICaller {
-	caller := &APICaller{
+func NewApiConnector(cnf config.APIConnectorConfig, dataChannel chan []byte, apiResponseChannel chan APIResponse) *APIConnector {
+	caller := &APIConnector{
 		config:             cnf,
 		doneChannel:        make(chan struct{}),
 		dataChannel:        dataChannel,
@@ -48,7 +48,7 @@ func NewApiCaller(cnf config.APICallerConfig, dataChannel chan []byte, apiRespon
 	return caller
 }
 
-func (p *APICaller) ForwardMessage() {
+func (p *APIConnector) ForwardMessage() {
 	for true {
 		select {
 		case message := <-p.dataChannel:
@@ -61,7 +61,7 @@ func (p *APICaller) ForwardMessage() {
 	}
 }
 
-func (p *APICaller) callAPI(message []byte) {
+func (p *APIConnector) callAPI(message []byte) {
 	url := fmt.Sprintf("%s://%s:%d/%s", p.config.Protocol, p.config.Host, p.config.Port, p.config.Path)
 
 	// Try twice
@@ -104,6 +104,6 @@ func (p *APICaller) callAPI(message []byte) {
 	}
 }
 
-func (p *APICaller) Close() {
+func (p *APIConnector) Close() {
 	p.doneChannel <- struct{}{}
 }

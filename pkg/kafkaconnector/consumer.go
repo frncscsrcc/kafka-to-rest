@@ -1,4 +1,4 @@
-package consumer
+package kafkaconnector
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-type Consumer struct {
-	config        config.ConsumerConfig
+type KafkaConnecotr struct {
+	config        config.KafkaConnectorConfig
 	kafkaConsumer *kafka.Consumer
 	kafkaProducer *kafka.Producer
 	shouldConsume bool
@@ -18,8 +18,12 @@ type Consumer struct {
 	commitChannel chan struct{}
 }
 
-func NewConsumer(cnf config.ConsumerConfig, dataChannel chan []byte, commitChannel chan struct{}) *Consumer {
-	return &Consumer{
+func NewKafkaConnector(
+	cnf config.KafkaConnectorConfig,
+	dataChannel chan []byte,
+	commitChannel chan struct{},
+) *KafkaConnecotr {
+	return &KafkaConnecotr{
 		config:        cnf,
 		dataChannel:   dataChannel,
 		commitChannel: commitChannel,
@@ -27,7 +31,7 @@ func NewConsumer(cnf config.ConsumerConfig, dataChannel chan []byte, commitChann
 	}
 }
 
-func (c *Consumer) Init(group string) error {
+func (c *KafkaConnecotr) Init(group string) error {
 	kafkaConsumer, errKafkaConsumerConnection := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":  fmt.Sprintf("%s:%d", c.config.Host, c.config.Port),
 		"group.id":           group,
@@ -57,7 +61,7 @@ func (c *Consumer) Init(group string) error {
 	return nil
 }
 
-func (c *Consumer) Consume() {
+func (c *KafkaConnecotr) Consume() {
 	for c.shouldConsume {
 		ev := c.kafkaConsumer.Poll(100)
 		switch e := ev.(type) {
@@ -72,7 +76,7 @@ func (c *Consumer) Consume() {
 	}
 }
 
-func (c *Consumer) SendToDLQ(message []byte) error {
+func (c *KafkaConnecotr) SendToDLQ(message []byte) error {
 	log.Print("Delivering message to DLQ")
 	delivery_chan := make(chan kafka.Event, 10000)
 	defer close(delivery_chan)
@@ -97,9 +101,9 @@ func (c *Consumer) SendToDLQ(message []byte) error {
 	return nil
 }
 
-func (c *Consumer) Close() {
+func (c *KafkaConnecotr) Close() {
 	c.shouldConsume = false
 	c.kafkaConsumer.Close()
 	c.kafkaProducer.Close()
-	log.Printf("Kafka consumer and kafka produce closed")
+	log.Printf("Kafka connector was closed")
 }
