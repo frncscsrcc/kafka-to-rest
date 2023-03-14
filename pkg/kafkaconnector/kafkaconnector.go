@@ -2,17 +2,17 @@ package kafkaconnector
 
 import (
 	"fmt"
+	"kafka-to-rest/pkg/adapters/kafka"
 	"kafka-to-rest/pkg/config"
+	"kafka-to-rest/pkg/dependencies"
 	"log"
 	"os"
-
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type KafkaConnector struct {
 	config        config.KafkaConnectorConfig
-	kafkaConsumer *kafka.Consumer
-	kafkaProducer *kafka.Producer
+	kafkaConsumer kafka.KafkaConsumerInterface
+	kafkaProducer kafka.KafkaProducerInterface
 	shouldConsume bool
 	dataChannel   chan []byte
 	commitChannel chan struct{}
@@ -32,73 +32,38 @@ func NewKafkaConnector(
 }
 
 func (c *KafkaConnector) Init(group string) error {
-	kafkaConsumer, errKafkaConsumerConnection := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":  fmt.Sprintf("%s:%d", c.config.Host, c.config.Port),
-		"group.id":           group,
-		"enable.auto.commit": false,
-		"auto.offset.reset":  "latest",
-	})
-	c.kafkaConsumer = kafkaConsumer
+	depInj := dependencies.DI()
 
-	if errKafkaConsumerConnection != nil {
-		return errKafkaConsumerConnection
+	c.kafkaConsumer = depInj.KafkaConsumerFactory.Build()
+	if err := c.kafkaConsumer.Init(c.config, group); err != nil {
+		return err
 	}
 
-	errTopicSubscription := c.kafkaConsumer.SubscribeTopics(c.config.Topics, nil)
-	if errTopicSubscription != nil {
-		return errTopicSubscription
+	c.kafkaProducer = depInj.KafkaProducerFactory.Build()
+	if err := c.kafkaProducer.Init(c.config); err != nil {
+		return err
 	}
 
-	kafkaProducer, errKafkaProducerConnection := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": fmt.Sprintf("%s:%d", c.config.Host, c.config.Port),
-		"acks":              "all",
-	})
-	c.kafkaProducer = kafkaProducer
-
-	if errKafkaProducerConnection != nil {
-		return errKafkaProducerConnection
-	}
 	return nil
 }
 
 func (c *KafkaConnector) Consume() {
 	for c.shouldConsume {
-		ev := c.kafkaConsumer.Poll(100)
-		switch e := ev.(type) {
-		case *kafka.Message:
-			c.dataChannel <- e.Value
+		if message, err := c.kafkaConsumer.Poll(100); err != nil {
+			fmt.Fprintf(os.Stderr, "%% Error: %v\n", err)
+		} else if len(message) == 0 {
+			continue
+		} else {
+			c.dataChannel <- message
 			<-c.commitChannel
 			c.kafkaConsumer.Commit()
-		case kafka.Error:
-			fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
-		default:
 		}
 	}
 }
 
 func (c *KafkaConnector) SendToDLQ(message []byte) error {
 	log.Print("Delivering message to DLQ")
-	delivery_chan := make(chan kafka.Event, 10000)
-	defer close(delivery_chan)
-
-	err := c.kafkaProducer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &c.config.DLQ, Partition: kafka.PartitionAny},
-		Value:          message},
-		delivery_chan,
-	)
-	if err != nil {
-		return err
-	}
-
-	e := <-delivery_chan
-	m := e.(*kafka.Message)
-
-	if m.TopicPartition.Error != nil {
-		log.Printf("Delivery to DLQ %s failed: %v\n", c.config.DLQ, m.TopicPartition.Error)
-		return m.TopicPartition.Error
-	}
-
-	return nil
+	return c.kafkaProducer.Produce(message, []byte{})
 }
 
 func (c *KafkaConnector) Close() {
