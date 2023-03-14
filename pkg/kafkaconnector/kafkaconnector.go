@@ -9,7 +9,7 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-type KafkaConnecotr struct {
+type KafkaConnector struct {
 	config        config.KafkaConnectorConfig
 	kafkaConsumer *kafka.Consumer
 	kafkaProducer *kafka.Producer
@@ -22,8 +22,8 @@ func NewKafkaConnector(
 	cnf config.KafkaConnectorConfig,
 	dataChannel chan []byte,
 	commitChannel chan struct{},
-) *KafkaConnecotr {
-	return &KafkaConnecotr{
+) *KafkaConnector {
+	return &KafkaConnector{
 		config:        cnf,
 		dataChannel:   dataChannel,
 		commitChannel: commitChannel,
@@ -31,7 +31,7 @@ func NewKafkaConnector(
 	}
 }
 
-func (c *KafkaConnecotr) Init(group string) error {
+func (c *KafkaConnector) Init(group string) error {
 	kafkaConsumer, errKafkaConsumerConnection := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":  fmt.Sprintf("%s:%d", c.config.Host, c.config.Port),
 		"group.id":           group,
@@ -61,7 +61,7 @@ func (c *KafkaConnecotr) Init(group string) error {
 	return nil
 }
 
-func (c *KafkaConnecotr) Consume() {
+func (c *KafkaConnector) Consume() {
 	for c.shouldConsume {
 		ev := c.kafkaConsumer.Poll(100)
 		switch e := ev.(type) {
@@ -76,7 +76,7 @@ func (c *KafkaConnecotr) Consume() {
 	}
 }
 
-func (c *KafkaConnecotr) SendToDLQ(message []byte) error {
+func (c *KafkaConnector) SendToDLQ(message []byte) error {
 	log.Print("Delivering message to DLQ")
 	delivery_chan := make(chan kafka.Event, 10000)
 	defer close(delivery_chan)
@@ -101,7 +101,7 @@ func (c *KafkaConnecotr) SendToDLQ(message []byte) error {
 	return nil
 }
 
-func (c *KafkaConnecotr) Close() {
+func (c *KafkaConnector) Close() {
 	c.shouldConsume = false
 	c.kafkaConsumer.Close()
 	c.kafkaProducer.Close()

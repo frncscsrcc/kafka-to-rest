@@ -13,7 +13,7 @@ import (
 type Proxy struct {
 	name      string
 	config    config.ProxyConfig
-	consumer  *kafkaconnector.KafkaConnecotr
+	consumer  *kafkaconnector.KafkaConnector
 	apiCaller *apiconnector.APIConnector
 
 	retryStatusList  map[int]bool
