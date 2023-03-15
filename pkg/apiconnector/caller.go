@@ -1,9 +1,10 @@
 package apiconnector
 
 import (
-	"bytes"
 	"fmt"
+	"kafka-to-rest/pkg/adapters/restapi"
 	"kafka-to-rest/pkg/config"
+	"kafka-to-rest/pkg/dependencies"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ type APIResponse struct {
 
 type APIConnector struct {
 	config             config.APIConnectorConfig
+	caller             restapi.RestAPICallerInterface
 	dataChannel        chan []byte
 	apiResponseChannel chan APIResponse
 	authToken          string
@@ -38,14 +40,20 @@ func (p *APIConnector) setToken() {
 }
 
 func NewApiConnector(cnf config.APIConnectorConfig, dataChannel chan []byte, apiResponseChannel chan APIResponse) *APIConnector {
-	caller := &APIConnector{
+	url := fmt.Sprintf("%s://%s:%d/%s", cnf.Protocol, cnf.Host, cnf.Port, cnf.Path)
+
+	caller := dependencies.DI().RestAPICallerFactory.Build()
+	caller.Init(url)
+
+	connector := &APIConnector{
 		config:             cnf,
 		doneChannel:        make(chan struct{}),
 		dataChannel:        dataChannel,
 		apiResponseChannel: apiResponseChannel,
+		caller:             caller,
 	}
-	caller.setToken()
-	return caller
+	connector.setToken()
+	return connector
 }
 
 func (p *APIConnector) ForwardMessage() {
@@ -62,44 +70,23 @@ func (p *APIConnector) ForwardMessage() {
 }
 
 func (p *APIConnector) callAPI(message []byte) {
-	url := fmt.Sprintf("%s://%s:%d/%s", p.config.Protocol, p.config.Host, p.config.Port, p.config.Path)
-
 	// Try twice
+	// if the first time it fails due to an invalid token, try to refresh the token
 	for range []int{1, 2} {
-		req, errPreparingRequest := http.NewRequest(
-			"POST",
-			url,
-			bytes.NewReader(message),
-		)
-
-		if p.authToken != "" {
-			req.Header.Add("Authorization", "Bearer "+p.authToken)
-		}
-
-		if errPreparingRequest != nil {
-			log.Printf("[ERROR] %s", errPreparingRequest)
-			p.apiResponseChannel <- APIResponse{Code: 0, Error: errPreparingRequest}
-			return
-		}
-
-		client := &http.Client{}
-		res, ererrPerformingRequest := client.Do(req)
-		if ererrPerformingRequest != nil {
-			p.apiResponseChannel <- APIResponse{Code: 0, Error: ererrPerformingRequest}
-			return
-		}
-
-		defer res.Body.Close()
+		statusCode, err := p.caller.Call(message, p.authToken)
 
 		// If the call was unautorized, try again once after setting again the token
 		// (the token may have changed in the meantime)
-		if res.StatusCode == http.StatusUnauthorized {
+		if statusCode == http.StatusUnauthorized {
 			p.setToken()
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
-		p.apiResponseChannel <- APIResponse{Code: res.StatusCode, Error: nil}
+		p.apiResponseChannel <- APIResponse{
+			Code:  statusCode,
+			Error: err,
+		}
 		break
 	}
 }

@@ -16,7 +16,7 @@
                 "protocol": "https",
                 "host": "webhookme.zhitty.com",
                 "port": 443,
-                "path": "send/WkYaaZN0",
+                "path": "send/aD3ecnoP",
                 "retry-delay": 1,
                 "retry-max": 5
             },
