@@ -13,10 +13,10 @@
                 "auth": {
                     "stored-token-filename": "token.txt"
                 },
-                "protocol": "https",
-                "host": "webhookme.zhitty.com",
-                "port": 443,
-                "path": "send/aD3ecnoP",
+                "protocol": "http",
+                "host": "127.0.0.1",
+                "port": 5000,
+                "path": "echo/",
                 "retry-delay": 1,
                 "retry-max": 5
             },
