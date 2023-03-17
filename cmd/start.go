@@ -23,7 +23,7 @@ var startCmd = &cobra.Command{
 
 		dep := dependencies.DI()
 		responses := make(chan restapi.FakeResponses)
-		dep.RestAPICallerFactory = restapi.FakeRealRestAPICallerFactory{Responses: responses}
+		dep.RestAPICallerFactory = restapi.FakeRestAPICallerFactory{Responses: responses}
 		go func() {
 			defer close(responses)
 			for true {

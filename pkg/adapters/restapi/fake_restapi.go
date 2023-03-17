@@ -21,11 +21,11 @@ func (c *FakeRealRestAPICaller) Call(data []byte, token string) (int, error) {
 
 // --
 
-type FakeRealRestAPICallerFactory struct {
+type FakeRestAPICallerFactory struct {
 	Responses chan FakeResponses
 }
 
-func (f FakeRealRestAPICallerFactory) Build() RestAPICallerInterface {
+func (f FakeRestAPICallerFactory) Build() RestAPICallerInterface {
 	return &FakeRealRestAPICaller{
 		Responses: f.Responses,
 	}
