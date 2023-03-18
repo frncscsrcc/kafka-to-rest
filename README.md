@@ -56,6 +56,8 @@ It forwards (async) Kafka messages to (sync) REST API.
 **Compile and run:**
 
 ```
+go mod download
+
 go build -o kafka-to-rest main.go
 
 ./kafka-to-rest start --config config.json
